@@ -16,19 +16,40 @@ def query(payload):
 st.title("Wikipedia Chatbot")
 
 retriever = WikipediaRetriever()
+ans = "Welcome, Please ask your Query!"
 
-with st.form("my_fourm"):
-    user_query = st.text_input("Please enter your query")
-    submit = st.form_submit_button("Submit")
+# Initialize chat history
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
-    if submit:
-        docs = retriever.get_relevant_documents(user_query)
-        prompt = f"<|system|> {docs[0]} <|user|> {user_query} <|assistant|>"
-        output = query({
-        	"inputs": prompt,
-        })
+# Display chat messages from history on app rerun
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
 
-        system_output = output[0]["generated_text"]
-        ans = system_output[len(prompt):]
-        st.write(ans)
 
+# React to user input
+if user_query := st.chat_input("Enter Your Query Here"):
+    # Display user message in chat message container
+    with st.chat_message("user"):
+        st.markdown(user_query)
+    # Add user message to chat history
+    st.session_state.messages.append({"role": "user", "content": user_query})
+    docs = retriever.get_relevant_documents(user_query)
+    if docs != []:
+         prompt = f"<|im_start|>system {docs[0]} <|im_end|> <|im_start|>user {user_query} <|im_end|> <|im_start|>assistant"
+         output = query({
+         	"inputs": prompt,
+         })
+
+         system_output = output[0]["generated_text"]
+         ans = system_output[len(prompt):]
+    else:
+         ans = "There is no info about it on Wikipedia as of now."
+
+response = f"Assistant: {ans}"
+# Display assistant response in chat message container
+with st.chat_message("assistant"):
+    st.markdown(response)
+# Add assistant response to chat history
+st.session_state.messages.append({"role": "assistant", "content": response})
